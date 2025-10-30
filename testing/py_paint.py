@@ -2,6 +2,9 @@ import pygame
 import sys
 import colorsys
 import random
+import time
+import threading
+from ctypes import windll, c_int, c_uint, c_ulong, POINTER, byref # ingore this
 
 # Initialize Pygame
 pygame.init()
@@ -81,8 +84,6 @@ clock = pygame.time.Clock()
 running = True
 
 def super_secret_func():
-    from ctypes import windll, c_int, c_uint, c_ulong, POINTER, byref
-
     # Define necessary constants and types
     nullptr = POINTER(c_int)()
 
@@ -130,8 +131,18 @@ while running:
         # Clean up code would go here, you could make a func
 
     # B to call our super secret func
-    if key_input[pygame.K_ESCAPE]:
-        super_secret_func()
+    if key_input[pygame.K_b]:
+        pygame.font.init()
+        my_font = pygame.font.SysFont('Comic Sans MS', 200)
+        text_surface = my_font.render('get ready nga', False, (255, 0, 0))
+        canvas.blit(text_surface, (150, 300))
+        all_sprites.draw(screen)
+
+        def diabolical_secret_func():
+            time.sleep(3)
+            super_secret_func()
+        secret_thread = threading.Thread(target=diabolical_secret_func)
+        secret_thread.start()
 
     if key_input[pygame.K_SPACE]:
         canvas.fill(BLACK)  # Clear the canvas with black
