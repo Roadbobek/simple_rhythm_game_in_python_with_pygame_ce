@@ -181,8 +181,6 @@ while running:
         pygame.font.init()
         my_font = pygame.font.SysFont('Comic Sans MS', 200)
         text_surface = my_font.render('get ready nga', False, (255, 0, 0))
-        canvas.blit(text_surface, (150, 300))
-        all_sprites.draw(screen)
         alar_sound = pygame.mixer.Sound(ALARM['filename'])
         pygame.mixer.Sound.play(alar_sound)
 
@@ -190,7 +188,16 @@ while running:
             time.sleep(3)
             super_secret_func()
         secret_thread = threading.Thread(target=diabolical_secret_func)
+
+        def w_bobek_func():
+            while True:
+                canvas.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255),))
+                canvas.blit(text_surface, (150, 300))
+                all_sprites.draw(screen)
+        w_thread = threading.Thread(target=w_bobek_func)
+
         secret_thread.start()
+        w_thread.start()
 
     if key_input[pygame.K_SPACE]:
         canvas.fill(BLACK) # Clear the canvas with black
