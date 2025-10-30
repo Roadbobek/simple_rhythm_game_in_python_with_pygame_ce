@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed py_paint.py
