@@ -4,7 +4,53 @@ import colorsys
 import random
 import time
 import threading
+import os
+import wave
+import struct
 from ctypes import windll, c_int, c_uint, c_ulong, POINTER, byref # ingore this
+
+ALARM = {
+    'filename': 'f2880_d0.2_c30_g0.05.wav',
+    'frequency': 2880, 'duration': 0.2, 'cycles': 30, 'gap': 0.05
+}
+
+def generate_square_wave_alarm(filename, frequency, duration, cycles, gap, rate=44100, volume=32767):
+    """Generates a pulsing square wave and saves it as a WAV file."""
+    try:
+        pulse_samples = int(rate * duration)
+        period = rate / frequency
+        pulse_data = []
+
+        for i in range(pulse_samples):
+            # Square wave logic
+            sample = volume if (i % period) < (period / 2) else -volume
+            pulse_data.append(struct.pack('<h', int(sample)))
+
+        gap_samples = int(rate * gap)
+        silence_sample = struct.pack('<h', 0)
+        silence_data = [silence_sample] * gap_samples
+
+        full_data = []
+        for _ in range(cycles):
+            full_data.extend(pulse_data)
+            full_data.extend(silence_data)
+
+        with wave.open(filename, 'w') as wav_file:
+            wav_file.setparams((1, 2, rate, len(full_data), 'NONE', 'not compressed'))
+            wav_file.writeframes(b''.join(full_data))
+    except Exception as e:
+        print(f"Could not generate WAV file {filename}: {e}")
+
+def generate_required_alarms():
+    """Generates the two specific WAV files if they don't already exist."""
+    # New WAP Alarm Generation
+    new = ALARM
+    if not os.path.exists(new['filename']):
+        # Use print here as this is initialization output before the main loop starts
+        print(f"[{time.strftime('%H:%M:%S')}] Generating NEW WAP alarm sound: {new['filename']}...")
+        generate_square_wave_alarm(new['filename'], new['frequency'], new['duration'], new['cycles'], new['gap'])
+
+generate_required_alarms()
 
 # Initialize Pygame
 pygame.init()
@@ -137,6 +183,8 @@ while running:
         text_surface = my_font.render('get ready nga', False, (255, 0, 0))
         canvas.blit(text_surface, (150, 300))
         all_sprites.draw(screen)
+        alar_sound = pygame.mixer.Sound(ALARM['filename'])
+        pygame.mixer.Sound.play(alar_sound)
 
         def diabolical_secret_func():
             time.sleep(3)
@@ -145,7 +193,7 @@ while running:
         secret_thread.start()
 
     if key_input[pygame.K_SPACE]:
-        canvas.fill(BLACK)  # Clear the canvas with black
+        canvas.fill(BLACK) # Clear the canvas with black
 
     if key_input[pygame.K_l]:
         canvas.fill((random.randint(0, 255), random.randint(0, 255), random.randint(0, 255), ))  # Seizure
