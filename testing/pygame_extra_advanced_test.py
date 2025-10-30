@@ -18,7 +18,11 @@ RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 # Extra settings
-FPS_CAP = 60  # Movement speed is independent of this value!
+FPS_CAP = 180  # Movement speed is independent of this value!
+# NEW: Define a fixed time step for physics and game logic updates.
+# This ensures movement speed is completely consistent (e.g., exactly 60 updates per second).
+FIXED_FPS = 60
+FIXED_DT = 1.0 / FIXED_FPS
 
 # --- Constants for Proportional Scaling ---
 # The sprite size is 2.5% of the screen width
@@ -54,19 +58,22 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.y = float(self.rect.y)
 
     def set_initial_position(self, screen_width, screen_height):
-        """Sets the initial position after the sprite object is created."""
+        """Sets the initial position after the sprite object is created and initializes floats."""
         self.rect.center = (screen_width // 2, screen_height // 2)
+        # Initialize float positions to match the initial center integer position
+        self.x = float(self.rect.x)
+        self.y = float(self.rect.y)
 
     def update(self, dt, screen_width, screen_height):
         """
-        Updates the player's position using Delta Time (dt), applying movement to
-        the float position, and then clamping and updating the integer rect.
+        Updates the player's position using Delta Time (dt, which is now FIXED_DT),
+        applying movement to the float position, and then clamping and updating the integer rect.
         """
-        # Apply movement to the high-precision float coordinates (self.x, self.y)
+        # 1. Apply movement to the high-precision float coordinates (self.x, self.y)
         self.x += self.dir_x * self.speed_pps * dt
         self.y += self.dir_y * self.speed_pps * dt
 
-        # Clamping/Boundary Check (applied to the float coordinates)
+        # 2. Clamping/Boundary Check (applied to the float coordinates)
 
         # Horizontal clamping
         if self.x < 0:
@@ -80,7 +87,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         elif self.y + self.rect.height > screen_height:
             self.y = screen_height - self.rect.height
 
-        # Update the integer rect for drawing/collision using ROUNDING
+        # 3. Update the integer rect for drawing/collision using ROUNDING
         # This synchronizes the integer position with the float position smoothly
         self.rect.x = round(self.x)
         self.rect.y = round(self.y)
@@ -95,53 +102,61 @@ all_sprites.add(player)
 # Game Loop Control
 clock = pygame.time.Clock()
 running = True
-dt = 0.0  # Delta time initialization
+accumulator = 0.0  # Accumulator for tracking time that needs to be simulated
 
 # Main Game Loop
 while running:
-    # --- 1. Calculate Delta Time (FPS Independence) ---
-    # clock.tick returns time since last call in ms. Divide by 1000.0 to get seconds.
-    dt = clock.tick(FPS_CAP) / 1000.0
+    # --- 1. Calculate Real-time Delta Time and Accumulate ---
+    # clock.tick returns time since last call in ms. Divide by 1000.0 to get seconds (raw_dt).
+    # We use a cap (FPS_CAP) for the drawing loop speed, but raw_dt accurately tracks time passed.
+    raw_dt = clock.tick(FPS_CAP) / 1000.0
+    accumulator += raw_dt
 
-    # --- 2. Event Handling (Only for window events) ---
+    # --- 2. Real-time Event Handling & Input Polling (Variable FPS) ---
+    # Events and input must be checked every single frame for maximum responsiveness.
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
 
-    # --- 3. STATE POLLING (Polling for Continuous Movement) ---
+    # STATE POLLING: Check keys every frame
     keys = pygame.key.get_pressed()
 
     # Reset direction multipliers every frame
     player.dir_x = 0
     player.dir_y = 0
 
-    # Check WASD state for movement (Net Movement System)
-
-    # Horizontal Movement (A/D) - Net Movement
+    # Calculate desired direction based on keys (Net Movement System)
     if keys[pygame.K_a]:
         player.dir_x -= 1  # -1
     if keys[pygame.K_d]:
-        player.dir_x += 1  # 1 (If A and D are held, dir_x becomes -1 + 1 = 0, stopping movement)
-
-    # Vertical Movement (W/S) - Net Movement
+        player.dir_x += 1  # 1
     if keys[pygame.K_w]:
         player.dir_y -= 1  # -1
     if keys[pygame.K_s]:
-        player.dir_y += 1  # 1 (If W and S are held, dir_y becomes -1 + 1 = 0, stopping movement)
+        player.dir_y += 1  # 1
 
-    # Check for quit
     if keys[pygame.K_ESCAPE]:
         running = False
 
-    # --- 4. Update ---
-    # Pass dt and screen dimensions to the update function
-    player.update(dt, SCREEN_WIDTH, SCREEN_HEIGHT)
+    # --- 3. Fixed Time Step Logic Update (Consistent Speed) ---
+    # Run the update function in fixed slices of time until the accumulator is caught up.
+    # The movement steps are always the same size, which guarantees consistent speed.
+    while accumulator >= FIXED_DT:
+        # Pass the FIXED_DT to the update method
+        player.update(FIXED_DT, SCREEN_WIDTH, SCREEN_HEIGHT)
 
-    # --- 5. Drawing ---
+        # Consume the time slice
+        accumulator -= FIXED_DT
+
+        # Note: If FPS drops very low, this loop might run multiple times in one frame,
+        # ensuring the simulation speed never slows down.
+
+    # --- 4. Drawing (Variable FPS) ---
+    # The player's position is now updated based on fixed logic, so drawing is smooth.
     screen.fill(BLACK)  # Clear the screen with black
     all_sprites.draw(screen)  # Draw all sprites
 
-    # --- 6. Display Update ---
+    # --- 5. Display Update ---
     pygame.display.flip()
 
 # Quit Pygame and exit the program

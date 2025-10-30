@@ -36,7 +36,7 @@ class PlayerSprite(pygame.sprite.Sprite):
         self.rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
         # Movement attributes
-        self.speed = 5
+        self.speed = 3
         self.change_x = 0
         self.change_y = 0
 
@@ -110,23 +110,19 @@ while running:
         #     if event.key == pygame.K_a or event.key == pygame.K_d:
         #         player.change_x = 0
 
-
-    if not (key_input[pygame.K_w] or key_input[pygame.K_s]):
-        player.change_y = 0
-    if not (key_input[pygame.K_a] or key_input[pygame.K_d]):
-        player.change_x = 0
+    # Upgraded movement system
+    player.change_y = 0
+    player.change_x = 0
 
     if (key_input[pygame.K_w] or key_input[pygame.K_s] or key_input[pygame.K_a] or key_input[pygame.K_d]):
-
-        # Upgraded movement system
         if key_input[pygame.K_w]:
-            player.change_y = -player.speed  # Move Up
+            player.change_y -= player.speed  # Move Up
         if key_input[pygame.K_s]:
-            player.change_y = player.speed  # Move Down
+            player.change_y += player.speed  # Move Down
         if key_input[pygame.K_a]:
-            player.change_x = -player.speed  # Move Left
+            player.change_x -= player.speed  # Move Left
         if key_input[pygame.K_d]:
-            player.change_x = player.speed  # Move Right
+            player.change_x += player.speed  # Move Right
 
     if key_input[pygame.K_SPACE]:
         screen.fill(BLACK)  # Clear the screen with black
