@@ -1,0 +1,1 @@
+pyinstaller --onefile --windowed --icon creu84.ico rhythm_game_v1.py

@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PyRhythm v1 Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+        }
+        button {
+            transition: all 0.15s ease-in-out;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: none;
+        }
+
+        /* Custom styling for the slider track */
+        #speed-slider::-webkit-slider-runnable-track {
+            background: #4b5563;
+            height: 8px;
+            border-radius: 4px;
+        }
+        /* Custom styling for the slider thumb */
+        #speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            margin-top: -6px; /* Adjust thumb position */
+        }
+        /* Native audio player is now fully visible and interactive */
+    </style>
+</head>
+<body class="p-4 md:p-8 flex justify-center">
+    <div class="container w-full">
+        <!-- H1 with custom colors using inline styles -->
+        <h1 class="text-4xl font-bold mb-6">
+            <span style="color: #FFDE57;">Py</span><span style="color: #4584B6;">Rhythm</span>
+            <span class="text-white">v1</span>
+            <span class="text-green-400">Editor</span>
+        </h1>
+        <p class="mb-6 text-gray-400">Upload an MP3, adjust the playback speed with the slider, and press one of your custom keys or the TAP button to log beats. The data is logged in your required (m.s.ms) format.</p>
+
+        <!-- Audio and File Input -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8 space-y-4">
+            <h2 class="text-2xl font-semibold mb-3">1. Load & Control</h2>
+
+            <!-- File Input -->
+            <input type="file" id="audio-file-input" accept="audio/mp3" class="w-full text-sm text-white file:mr-4 file:py-2.5 file:px-16 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer">
+
+            <!-- NATIVE AUDIO CONTROLS (now visible) -->
+            <audio id="audio-player" class="w-full mt-4" controls></audio>
+
+            <h3 class="text-xl font-medium text-gray-300 pt-4 mb-2">Set Playback Delay:</h3>
+            <div class="flex space-x-3">
+                <button onclick="setDelay(1)" id="delay-1s" class="flex-grow py-2 rounded-lg bg-gray-700 text-white font-medium text-sm border-2 border-transparent hover:border-blue-500 transition duration-150">1 Second</button>
+                <button onclick="setDelay(2)" id="delay-2s" class="flex-grow py-2 rounded-lg bg-gray-700 text-white font-medium text-sm border-2 border-transparent hover:border-blue-500 transition duration-150">2 Seconds</button>
+                <button onclick="setDelay(3)" id="delay-3s" class="flex-grow py-2 rounded-lg bg-gray-700 text-white font-medium text-sm border-2 border-transparent hover:border-blue-500 transition duration-150">3 Seconds</button>
+                <button onclick="setDelay(0)" id="delay-0s" class="flex-grow py-2 rounded-lg bg-blue-600 text-white font-medium text-sm border-2 border-blue-500 transition duration-150">None (0s)</button>
+            </div>
+
+            <!-- Custom Playback Button (Primarily for Delayed Start) -->
+            <div class="flex items-center space-x-4 pt-4">
+                <button
+                    onclick="togglePlayPause()"
+                    id="play-pause-button"
+                    class="px-6 py-3 bg-blue-600 rounded-lg text-white font-bold text-xl flex-shrink-0 min-w-[220px]"
+                >
+                    PLAY (Delay: 0s)
+                </button>
+                <p id="play-status" class="text-lg text-yellow-300 font-semibold truncate">
+                    Ready to load audio.
+                </p>
+            </div>
+
+            <!-- Playback Speed Slider -->
+            <div id="playback-controls" class="pt-6 space-y-2">
+                <span class="text-lg font-medium text-gray-300">Playback Speed:</span>
+                <input
+                    type="range"
+                    id="speed-slider"
+                    min="10"
+                    max="200"
+                    value="100"
+                    step="5"
+                    oninput="setSpeed(this.value / 100)"
+                    class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer range-lg"
+                >
+            </div>
+            <p id="current-speed" class="text-sm text-yellow-400 pt-2">Current Speed: 1.00x</p>
+        </div>
+
+        <!-- Tapping Interface -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg mb-8 space-y-4">
+            <h2 class="text-2xl font-semibold mb-3">2. Tap Beats</h2>
+
+            <!-- Custom Keybind Inputs (Triple) -->
+            <div class="space-y-2">
+                <span class="text-gray-300 font-semibold">Set Tap Keys (Click an input and press the desired key):</span>
+                <div class="flex space-x-2">
+                    <input type="text" id="keybind-input-0" data-key-index="0" placeholder="Key 1" readonly class="flex-grow p-2 bg-gray-900 border border-gray-600 rounded text-center cursor-pointer text-yellow-300 font-mono text-xl focus:outline-none" title="Click and press the key you want to use for Tap 1.">
+                    <input type="text" id="keybind-input-1" data-key-index="1" placeholder="Key 2" readonly class="flex-grow p-2 bg-gray-900 border border-gray-600 rounded text-center cursor-pointer text-yellow-300 font-mono text-xl focus:outline-none" title="Click and press the key you want to use for Tap 2.">
+                    <input type="text" id="keybind-input-2" data-key-index="2" placeholder="Key 3" readonly class="flex-grow p-2 bg-gray-900 border border-gray-600 rounded text-center cursor-pointer text-yellow-300 font-mono text-xl focus:outline-none" title="Click and press the key you want to use for Tap 3.">
+                </div>
+            </div>
+
+            <p class="text-xl font-mono text-center text-green-400 py-2 border border-gray-700 rounded-lg" id="current-time-display">00:00.000</p>
+
+            <button onclick="logBeat()" id="tap-button" class="w-full py-4 bg-red-600 rounded-xl text-white font-extrabold text-2xl shadow-xl active:bg-red-700 transition duration-150">
+                TAP ANY KEY (<span id="keybind-display">A, S, D</span>)
+            </button>
+            <p id="tap-instruction" class="text-sm text-gray-400 text-center">Current Tap Keys: A, S, D.</p>
+        </div>
+
+        <!-- Output Area -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-lg">
+            <h2 class="text-2xl font-semibold mb-3">3. Generated Beatmap Data</h2>
+            <textarea id="beatmap-output" rows="8" readonly class="w-full p-3 font-mono text-sm bg-gray-900 border border-gray-700 rounded-lg text-white resize-none"></textarea>
+            <button onclick="copyBeats()" class="mt-4 px-6 py-2 bg-green-600 rounded-lg text-white font-semibold shadow-md transition duration-150">
+                Copy Data
+            </button>
+            <p id="copy-message" class="text-sm text-green-500 mt-2 opacity-0 transition duration-300">Copied to clipboard!</p>
+        </div>
+    </div>
+
+    <script>
+        const audioPlayer = document.getElementById('audio-player');
+        const fileInput = document.getElementById('audio-file-input');
+        const beatmapOutput = document.getElementById('beatmap-output');
+        const currentTimeDisplay = document.getElementById('current-time-display');
+        const copyMessage = document.getElementById('copy-message');
+        const currentSpeedDisplay = document.getElementById('current-speed');
+        const speedSlider = document.getElementById('speed-slider');
+        const tapButton = document.getElementById('tap-button');
+        const keybindDisplay = document.getElementById('keybind-display');
+        const tapInstruction = document.getElementById('tap-instruction');
+        const playPauseButton = document.getElementById('play-pause-button');
+        const playStatusDisplay = document.getElementById('play-status');
+        const delayButtons = [
+            document.getElementById('delay-0s'),
+            document.getElementById('delay-1s'),
+            document.getElementById('delay-2s'),
+            document.getElementById('delay-3s')
+        ];
+
+        let beats = [];
+        let playbackRate = 1.0;
+        let playTimeout = null;
+        let currentDelay = 0; // Default to 0 seconds delay
+        let isPreparing = false;
+
+        // Correct initial default values for Left, Space, Right
+        let tapKeyCodes = ['ArrowLeft', 'Space', 'ArrowRight'];
+        let tapKeyNames = ['ArrowLeft', 'Space', 'ArrowRight'];
+
+        // Get all key input elements
+        const keybindInputs = [
+            document.getElementById('keybind-input-0'),
+            document.getElementById('keybind-input-1'),
+            document.getElementById('keybind-input-2')
+        ];
+
+        // --- Keybind Management ---
+
+        function getKeyDisplayName(key) {
+            // Converts key codes/names to cleaner display names
+            if (key === ' ') return 'SPACE';
+            if (key === 'Enter') return 'ENTER';
+            if (key.startsWith('Key')) return key.substring(3); // e.g., 'KeyA' -> 'A'
+            if (key.startsWith('Digit')) return key.substring(5); // e.g., 'Digit1' -> '1'
+            if (key.startsWith('Arrow')) return key.substring(5).toUpperCase(); // e.g., 'ArrowLeft' -> 'LEFT'
+            return key.toUpperCase();
+        }
+
+        function updateKeybindUI() {
+            const displayNames = tapKeyNames.map(name => getKeyDisplayName(name));
+
+            // Update the values in the three input fields
+            keybindInputs.forEach((input, index) => {
+                input.value = displayNames[index];
+            });
+
+            const displayString = displayNames.join(', ');
+            keybindDisplay.textContent = displayString;
+            tapButton.innerHTML = `TAP ANY KEY (<span id="keybind-display">${displayString}</span>)`;
+            tapInstruction.textContent = `Current Tap Keys: ${displayString}.`;
+        }
+
+        function loadKeybind() {
+            // Load keybinds from localStorage for persistence
+            for (let i = 0; i < 3; i++) {
+                const storedCode = localStorage.getItem(`rhythm_tap_key_code_${i}`);
+                const storedName = localStorage.getItem(`rhythm_tap_key_name_${i}`);
+
+                if (storedCode) tapKeyCodes[i] = storedCode;
+                if (storedName) tapKeyNames[i] = storedName;
+            }
+            updateKeybindUI();
+        }
+
+        function setKeybind(event) {
+            // Only capture keydown on the specific input element
+            event.preventDefault();
+            event.stopPropagation();
+
+            // Determine which of the three inputs is being set
+            const inputElement = event.target;
+            const index = parseInt(inputElement.getAttribute('data-key-index'), 10);
+
+            if (isNaN(index)) return;
+
+            const keyName = event.key;
+            const keyCode = event.code;
+
+            // Filter out modifier keys which are unusable for tapping
+            if (['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(keyName)) {
+                inputElement.value = 'Invalid';
+                return;
+            }
+
+            tapKeyCodes[index] = keyCode;
+            tapKeyNames[index] = keyName;
+
+            localStorage.setItem(`rhythm_tap_key_code_${index}`, keyCode);
+            localStorage.setItem(`rhythm_tap_key_name_${index}`, keyName);
+
+            inputElement.blur(); // Remove focus after setting
+            updateKeybindUI();
+        }
+
+        // Setup listeners for the custom key inputs
+        keybindInputs.forEach((input) => {
+            input.addEventListener('click', () => {
+                 input.value = 'Press key...';
+            });
+            input.addEventListener('keydown', setKeybind);
+            input.addEventListener('blur', updateKeybindUI);
+        });
+
+        // --- Playback and Delay Functions ---
+
+        function updateDelayUI() {
+            delayButtons.forEach(button => {
+                const delay = parseInt(button.textContent.split(' ')[0], 10) || 0; // Extract the number
+                if (delay === currentDelay) {
+                    button.classList.add('bg-blue-600', 'border-blue-500');
+                    button.classList.remove('bg-gray-700', 'border-transparent');
+                } else {
+                    button.classList.remove('bg-blue-600', 'border-blue-500');
+                    button.classList.add('bg-gray-700', 'border-transparent');
+                }
+            });
+            updatePlayPauseButton(audioPlayer.paused === false && !audioPlayer.ended, isPreparing);
+        }
+
+        function setDelay(seconds) {
+            currentDelay = seconds;
+            updateDelayUI();
+        }
+
+        function updatePlayPauseButton(isPlaying, isPreparing) {
+            // If we are waiting for the delay
+            if (isPreparing) {
+                playPauseButton.textContent = `CANCEL (${currentDelay}s)`;
+                playPauseButton.classList.remove('bg-blue-600');
+                playPauseButton.classList.add('bg-red-600');
+                playStatusDisplay.textContent = `Playing in ${currentDelay} seconds...`;
+
+            // If the audio is actively playing (triggered by native or delayed play)
+            } else if (isPlaying) {
+                playPauseButton.textContent = 'PAUSE';
+                playPauseButton.classList.remove('bg-red-600');
+                playPauseButton.classList.add('bg-blue-600');
+                playStatusDisplay.textContent = `Playing at ${playbackRate.toFixed(2)}x`;
+
+            // If the audio is paused or ended
+            } else {
+                playPauseButton.textContent = `PLAY (Delay: ${currentDelay}s)`;
+                playPauseButton.classList.remove('bg-red-600');
+                playPauseButton.classList.add('bg-blue-600');
+
+                // Only update status display if the audio source is set
+                if (audioPlayer.src) {
+                    // Show current time when paused
+                    playStatusDisplay.textContent = `Paused at ${formatTime(audioPlayer.currentTime).slice(1, -1)}.`;
+                } else {
+                    playStatusDisplay.textContent = 'Ready to load audio.';
+                }
+            }
+        }
+
+        function togglePlayPause() {
+            if (!audioPlayer.src) {
+                playStatusDisplay.textContent = 'Please load an audio file first.';
+                return;
+            }
+
+            if (isPreparing) {
+                // Cancel the preparation timeout
+                clearTimeout(playTimeout);
+                playTimeout = null;
+                isPreparing = false;
+                updatePlayPauseButton(false, false);
+                return;
+            }
+
+            if (audioPlayer.paused) {
+                // Start Playback sequence (with delay)
+
+                // Clear any leftover state
+                clearTimeout(playTimeout);
+
+                if (currentDelay > 0) {
+                    isPreparing = true;
+                    updatePlayPauseButton(false, true); // Update to CANCEL button
+
+                    playTimeout = setTimeout(() => {
+                        audioPlayer.play().catch(e => console.error("Play error:", e));
+                        // UI will be updated by the 'play' event listener
+                    }, currentDelay * 1000);
+
+                } else {
+                    // No delay, play immediately
+                    audioPlayer.play().catch(e => console.error("Play error:", e));
+                    // UI will be updated by the 'play' event listener
+                }
+
+            } else {
+                // Pause audio
+                audioPlayer.pause();
+                // UI will be updated by the 'pause' event listener
+            }
+        }
+
+        // Listeners for audio state
+        audioPlayer.addEventListener('play', () => {
+            // The isPreparing check ensures the button text updates correctly after the delay
+            if (isPreparing) isPreparing = false;
+            updatePlayPauseButton(true, false);
+        });
+
+        audioPlayer.addEventListener('pause', () => {
+            clearTimeout(playTimeout);
+            isPreparing = false;
+            updatePlayPauseButton(false, false);
+        });
+
+        audioPlayer.addEventListener('ended', () => {
+            clearTimeout(playTimeout);
+            isPreparing = false;
+            updatePlayPauseButton(false, false);
+        });
+
+        // --- Core Functions ---
+
+        // Converts total seconds (float) to (m.s.ms) format
+        function formatTime(totalSeconds) {
+            if (isNaN(totalSeconds) || totalSeconds < 0) return '00:00.000';
+
+            const totalMs = Math.round(totalSeconds * 1000);
+            const ms = totalMs % 1000;
+            const totalSecondsInt = Math.floor(totalMs / 1000);
+            const seconds = totalSecondsInt % 60;
+            const minutes = Math.floor(totalSecondsInt / 60);
+
+            // Pad with leading zeros
+            const minStr = String(minutes).padStart(2, '0');
+            const secStr = String(seconds).padStart(2, '0');
+            const msStr = String(ms).padStart(3, '0');
+
+            return `(${minStr}.${secStr}.${msStr})`;
+        }
+
+        function updateOutput() {
+            // Format for easy import: (m.s.ms), (m.s.ms), ...
+            beatmapOutput.value = beats.join(', ');
+        }
+
+        function logBeat() {
+            // Check if audio is actually playing (not paused, ended, or just loaded/preparing)
+            if (audioPlayer.paused && !isPreparing) {
+                tapInstruction.textContent = "❗ Start playing the music before tapping. ❗";
+                tapInstruction.classList.remove('text-gray-400');
+                tapInstruction.classList.add('text-red-500', 'font-bold');
+
+                // Revert message after a delay
+                setTimeout(() => {
+                    updateKeybindUI(); // Reverts to normal instruction text
+                    tapInstruction.classList.remove('text-red-500', 'font-bold');
+                    tapInstruction.classList.add('text-gray-400');
+                }, 3000);
+                return;
+            }
+
+            // Do not log beat if in preparation phase, only when actively playing
+            if (isPreparing) return;
+
+            const time = audioPlayer.currentTime;
+            const formattedTime = formatTime(time);
+            beats.push(formattedTime);
+
+            updateOutput();
+
+            // Flash the time display for feedback
+            currentTimeDisplay.classList.add('bg-red-800');
+            setTimeout(() => {
+                currentTimeDisplay.classList.remove('bg-red-800');
+            }, 100);
+        }
+
+        // Updated setSpeed to handle float input and display text
+        function setSpeed(rate) {
+            rate = parseFloat(rate); // Ensure rate is a float
+            if (audioPlayer) {
+                audioPlayer.playbackRate = rate;
+                playbackRate = rate;
+                // Display speed with 2 decimal places for clarity (e.g., 1.00x)
+                currentSpeedDisplay.textContent = `Current Speed: ${rate.toFixed(2)}x`;
+                if (!audioPlayer.paused && !isPreparing) {
+                    playStatusDisplay.textContent = `Playing at ${playbackRate.toFixed(2)}x`;
+                }
+            }
+        }
+
+        function copyBeats() {
+            if (beatmapOutput.value) {
+                document.execCommand('copy');
+                copyMessage.classList.remove('opacity-0');
+                copyMessage.classList.add('opacity-100');
+                setTimeout(() => {
+                    copyMessage.classList.remove('opacity-100');
+                    copyMessage.classList.add('opacity-0');
+                }, 1500);
+            }
+        }
+
+        // --- Event Handlers ---
+
+        // Load Audio File
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                audioPlayer.src = url;
+                beats = []; // Reset beats when a new song is loaded
+                updateOutput();
+
+                // Reset slider to 1.0x (value 100) and update speed
+                speedSlider.value = 100;
+                setSpeed(1.0);
+
+                // Reset playback state
+                audioPlayer.pause();
+                audioPlayer.currentTime = 0;
+                clearTimeout(playTimeout);
+                isPreparing = false;
+                updatePlayPauseButton(false, false);
+            }
+        });
+
+        // Keyboard Shortcuts for Tapping (NO SEEKING)
+        document.addEventListener('keydown', (event) => {
+            const isTapKey = tapKeyCodes.includes(event.code);
+            const isKeybindInputFocused = keybindInputs.includes(document.activeElement) || document.getElementById('beatmap-output') === document.activeElement;
+
+            if (isTapKey) {
+                // Prevent default action immediately if it's a tap key,
+                // this stops the spacebar from scrolling the page and/or pausing native controls.
+                if (!isKeybindInputFocused) {
+                    event.preventDefault();
+                    logBeat();
+                }
+            }
+        });
+
+        // Time Display Update Loop
+        setInterval(() => {
+            if (!audioPlayer.paused && !audioPlayer.ended) {
+                currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+            } else if (audioPlayer.readyState >= 3) { // Player loaded but paused/ended
+                currentTimeDisplay.textContent = formatTime(audioPlayer.currentTime);
+            }
+        }, 33); // Update approximately 30 times per second for smooth timing display
+
+        // Initial setup for clipboard copy functionality
+        document.addEventListener('copy', (e) => {
+            e.clipboardData.setData('text/plain', beatmapOutput.value);
+            e.preventDefault();
+        });
+
+        // Prevent tap keys from triggering when input fields are focused
+        document.getElementById('beatmap-output').addEventListener('keydown', (e) => {
+            if (tapKeyCodes.includes(e.code)) e.stopPropagation();
+        });
+        fileInput.addEventListener('keydown', (e) => {
+            if (tapKeyCodes.includes(e.code)) e.stopPropagation();
+        });
+        speedSlider.addEventListener('keydown', (e) => {
+            if (tapKeyCodes.includes(e.code)) e.stopPropagation();
+        });
+
+        // Initial load of keybinds and display setup
+        loadKeybind();
+        setSpeed(1.0);
+        updateDelayUI();
+        updatePlayPauseButton(false, false); // Initialize button state
+    </script>
+</body>
+</html>
